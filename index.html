@@ -1,13 +1,38 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>flight-simulator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="Earth Life Simulator - 3D地球シミュレーター" />
+    <title>Earth Life Simulator</title>
   </head>
   <body>
-    <div id="app"></div>
+    <!-- ローディング画面 -->
+    <div id="loading-screen" class="overlay">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <p class="loading-text">地球を読み込み中...</p>
+      </div>
+    </div>
+
+    <!-- エラー画面 -->
+    <div id="error-screen" class="overlay hidden">
+      <div class="error-content">
+        <h2>読み込みエラー</h2>
+        <p id="error-message">Cesiumの読み込みに失敗しました。</p>
+        <button id="retry-button" type="button">再読み込み</button>
+      </div>
+    </div>
+
+    <!-- Cesiumコンテナ -->
+    <div id="cesiumContainer"></div>
+
+    <!-- ヘッダー -->
+    <header id="app-header">
+      <h1 id="app-title">Earth Life Simulator</h1>
+      <button id="settings-button" type="button" aria-label="設定">⚙️</button>
+    </header>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
