@@ -9,6 +9,8 @@ import {
 
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
+import { Game } from "./game/Game.js";
+
 // ========================================
 // Cesium ion トークン
 // ========================================
@@ -23,7 +25,6 @@ const loadingScreen = document.getElementById("loading-screen");
 const errorScreen = document.getElementById("error-screen");
 const errorMessage = document.getElementById("error-message");
 const retryButton = document.getElementById("retry-button");
-const settingsButton = document.getElementById("settings-button");
 
 // ========================================
 // エラー表示
@@ -62,16 +63,6 @@ function hideLoading() {
 if (retryButton) {
   retryButton.addEventListener("click", () => {
     window.location.reload();
-  });
-}
-
-// ========================================
-// 設定ボタン
-// ========================================
-
-if (settingsButton) {
-  settingsButton.addEventListener("click", () => {
-    console.log("設定ボタンが押されました。");
   });
 }
 
@@ -160,6 +151,14 @@ function init() {
     console.log(
       "🌎 Earth Life Simulator - Cesium Viewer initialized!"
     );
+
+    // ========================================
+    // Phase 2: ゲーム初期化
+    // ========================================
+
+    const game = new Game(viewer);
+    game.start();
+    window.__game = game;
 
     // ========================================
     // ローディング終了

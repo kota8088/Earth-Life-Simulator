@@ -33,6 +33,63 @@
       <button id="settings-button" type="button" aria-label="設定">⚙️</button>
     </header>
 
+    <!-- =========================================================
+         Phase 2: ゲームUI
+         ========================================================= -->
+
+    <!-- 操作説明（左下） -->
+    <div id="controls-help">
+      <div class="help-title">操作方法</div>
+      <div class="help-row"><span class="key">W A S D</span> 移動</div>
+      <div class="help-row"><span class="key">Shift</span> ダッシュ</div>
+      <div class="help-row"><span class="key">Space</span> ジャンプ</div>
+      <div class="help-row"><span class="key">V</span> 視点切替</div>
+      <div class="help-row"><span class="key">Click</span> マウス固定</div>
+      <div class="help-row"><span class="key">ESC</span> マウス解放</div>
+    </div>
+
+    <!-- スタミナゲージ（下部中央） -->
+    <div id="stamina-container">
+      <div class="stamina-label">STAMINA</div>
+      <div class="stamina-bar">
+        <div id="stamina-fill" class="stamina-fill"></div>
+      </div>
+      <div id="stamina-value" class="stamina-value">100</div>
+    </div>
+
+    <!-- 視点モード表示（下部右） -->
+    <div id="view-mode-indicator">1st Person</div>
+
+    <!-- 設定パネル -->
+    <div id="settings-panel" class="hidden">
+      <div class="settings-header">
+        <span>設定</span>
+        <button id="settings-close" type="button" aria-label="閉じる">✕</button>
+      </div>
+      <div class="settings-body">
+        <div class="settings-section">
+          <div class="settings-section-title">性別</div>
+          <div class="gender-buttons">
+            <button id="gender-male" type="button" class="gender-button active">男性 🧍‍♂️</button>
+            <button id="gender-female" type="button" class="gender-button">女性 🧍‍♀️</button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">セーブデータ</div>
+          <button id="save-now" type="button" class="save-button">今すぐ保存</button>
+          <div id="last-saved" class="last-saved">最終保存: --:--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pointer Lock 案内 -->
+    <div id="click-to-play">
+      <div class="click-to-play-inner">
+        <div class="click-icon">🖱️</div>
+        <div class="click-text">クリックしてプレイ開始</div>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
