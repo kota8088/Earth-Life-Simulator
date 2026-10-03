@@ -12,6 +12,12 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 import { Game } from "./game/Game.js";
 
 // ========================================
+// Cesium のアセットパス
+// ========================================
+
+window.CESIUM_BASE_URL = "/cesiumStatic";
+
+// ========================================
 // Cesium ion トークン
 // ========================================
 
@@ -93,18 +99,13 @@ function init() {
     // ========================================
 
     const viewer = new Viewer("cesiumContainer", {
-      // 地球の標準レイヤーを使用
       baseLayerPicker: false,
-
-      // 不要なUIを無効化
       geocoder: false,
       homeButton: false,
       sceneModePicker: false,
       navigationHelpButton: false,
-
       animation: false,
       timeline: false,
-
       fullscreenButton: false,
       infoBox: false,
       selectionIndicator: false,

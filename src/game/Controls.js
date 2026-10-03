@@ -23,10 +23,12 @@ export class Controls {
 
     // ---- Pointer Lock 状態 ----
     this.isLocked = false;
+    this.lastUnlockTime = 0;
 
     // ---- イベント購読者 ----
     this.listeners = {
       toggleView: new Set(),
+      toggleSettings: new Set(),
       jump: new Set(),
       lockChange: new Set(),
     };
@@ -34,36 +36,60 @@ export class Controls {
     this.bindEvents();
   }
 
+  /**
+   * 入力欄（input / textarea / contenteditable）にフォーカスがあるか
+   */
+  isTextInputFocused() {
+    const el = document.activeElement;
+    if (!el) return false;
+
+    const tag = el.tagName ? el.tagName.toLowerCase() : "";
+    if (tag === "input" || tag === "textarea") return true;
+    if (el.isContentEditable) return true;
+
+    return false;
+  }
+
   bindEvents() {
     // ---- キーボード ----
     this.onKeyDown = (e) => {
+      const inTextInput = this.isTextInputFocused();
+
       switch (e.code) {
         case "KeyW":
-          this.keys.forward = true;
+          if (!inTextInput) this.keys.forward = true;
           break;
         case "KeyS":
-          this.keys.backward = true;
+          if (!inTextInput) this.keys.backward = true;
           break;
         case "KeyA":
-          this.keys.left = true;
+          if (!inTextInput) this.keys.left = true;
           break;
         case "KeyD":
-          this.keys.right = true;
+          if (!inTextInput) this.keys.right = true;
           break;
         case "Space":
-          e.preventDefault();
-          if (!this.keys.jump) {
-            this.emit("jump");
+          if (!inTextInput) {
+            e.preventDefault();
+            if (!e.repeat && !this.keys.jump) {
+              this.emit("jump");
+            }
+            this.keys.jump = true;
           }
-          this.keys.jump = true;
           break;
         case "ShiftLeft":
         case "ShiftRight":
-          this.keys.dash = true;
+          if (!inTextInput) this.keys.dash = true;
           break;
         case "KeyV":
-          if (!e.repeat) {
+          if (!inTextInput && !e.repeat) {
             this.emit("toggleView");
+          }
+          break;
+        case "KeyM":
+          if (inTextInput) return;
+          if (!e.repeat) {
+            this.emit("toggleSettings");
           }
           break;
       }
@@ -93,8 +119,13 @@ export class Controls {
       }
     };
 
+    this.onBlur = () => {
+      this.resetKeys();
+    };
+
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
+    window.addEventListener("blur", this.onBlur);
 
     // ---- マウス移動 ----
     this.onMouseMove = (e) => {
@@ -107,7 +138,13 @@ export class Controls {
 
     // ---- Pointer Lock 状態変化 ----
     this.onLockChange = () => {
+      const wasLocked = this.isLocked;
       this.isLocked = document.pointerLockElement === this.dom;
+
+      if (wasLocked && !this.isLocked) {
+        this.lastUnlockTime = performance.now();
+      }
+
       this.emit("lockChange", this.isLocked);
     };
 
@@ -116,10 +153,38 @@ export class Controls {
 
   /**
    * Pointer Lock を要求する
+   * 解除直後（1秒以内）はセキュリティ制約で取得できないため、その場合はスキップ
    */
   requestLock() {
+    const now = performance.now();
+    if (this.lastUnlockTime && now - this.lastUnlockTime < 1000) {
+      console.warn(
+        "[Controls] Pointer Lock は解除直後は取得できません。少し待ってください。"
+      );
+      return;
+    }
+
     if (this.dom.requestPointerLock) {
-      this.dom.requestPointerLock();
+      try {
+        const result = this.dom.requestPointerLock();
+        // 新しいブラウザは Promise を返す
+        if (result && typeof result.catch === "function") {
+          result.catch((err) => {
+            console.warn("[Controls] Pointer Lock 失敗:", err.message);
+          });
+        }
+      } catch (err) {
+        console.warn("[Controls] Pointer Lock 例外:", err.message);
+      }
+    }
+  }
+
+  /**
+   * Pointer Lock を解除する
+   */
+  releaseLock() {
+    if (document.pointerLockElement) {
+      document.exitPointerLock();
     }
   }
 
@@ -132,6 +197,18 @@ export class Controls {
     this.mouseDelta.x = 0;
     this.mouseDelta.y = 0;
     return { dx, dy };
+  }
+
+  /**
+   * キー状態をすべてリセット
+   */
+  resetKeys() {
+    this.keys.forward = false;
+    this.keys.backward = false;
+    this.keys.left = false;
+    this.keys.right = false;
+    this.keys.jump = false;
+    this.keys.dash = false;
   }
 
   on(event, callback) {
@@ -157,6 +234,7 @@ export class Controls {
   destroy() {
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("blur", this.onBlur);
     document.removeEventListener("mousemove", this.onMouseMove);
     document.removeEventListener("pointerlockchange", this.onLockChange);
   }

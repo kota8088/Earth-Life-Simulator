@@ -33,10 +33,6 @@
       <button id="settings-button" type="button" aria-label="設定">⚙️</button>
     </header>
 
-    <!-- =========================================================
-         Phase 2: ゲームUI
-         ========================================================= -->
-
     <!-- 操作説明（左下） -->
     <div id="controls-help">
       <div class="help-title">操作方法</div>
@@ -44,6 +40,7 @@
       <div class="help-row"><span class="key">Shift</span> ダッシュ</div>
       <div class="help-row"><span class="key">Space</span> ジャンプ</div>
       <div class="help-row"><span class="key">V</span> 視点切替</div>
+      <div class="help-row"><span class="key">M</span> 設定</div>
       <div class="help-row"><span class="key">Click</span> マウス固定</div>
       <div class="help-row"><span class="key">ESC</span> マウス解放</div>
     </div>
@@ -60,6 +57,9 @@
     <!-- 視点モード表示（下部右） -->
     <div id="view-mode-indicator">1st Person</div>
 
+    <!-- オートセーブ通知（右上、ヘッダーの下） -->
+    <div id="autosave-indicator" class="hidden">💾 自動保存</div>
+
     <!-- 設定パネル -->
     <div id="settings-panel" class="hidden">
       <div class="settings-header">
@@ -74,10 +74,21 @@
             <button id="gender-female" type="button" class="gender-button">女性 🧍‍♀️</button>
           </div>
         </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">視野角（FOV）</div>
+          <div class="fov-row">
+            <input id="fov-slider" type="range" min="30" max="110" step="1" value="60" />
+            <span id="fov-value" class="fov-value">60°</span>
+          </div>
+          <div class="fov-hint">一人称・三人称の両方に適用されます</div>
+        </div>
+
         <div class="settings-section">
           <div class="settings-section-title">セーブデータ</div>
           <button id="save-now" type="button" class="save-button">今すぐ保存</button>
           <div id="last-saved" class="last-saved">最終保存: --:--</div>
+          <div class="autosave-hint">オートセーブ: 5秒ごと</div>
         </div>
       </div>
     </div>

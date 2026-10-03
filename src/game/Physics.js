@@ -1,107 +1,105 @@
 /* =========================================================
-   SettingsPanel
-   設定パネルの開閉・性別切替・保存ボタンを管理
+   Physics
+   重力・接地・ジャンプを処理
    ========================================================= */
 
-export class SettingsPanel {
-  constructor({ onGenderChange, onSaveNow, saveManager }) {
-    this.panel = document.getElementById("settings-panel");
-    this.openButton = document.getElementById("settings-button");
-    this.closeButton = document.getElementById("settings-close");
-    this.genderMale = document.getElementById("gender-male");
-    this.genderFemale = document.getElementById("gender-female");
-    this.saveNowButton = document.getElementById("save-now");
-    this.lastSaved = document.getElementById("last-saved");
+import { Cartographic } from "cesium";
 
-    this.onGenderChange = onGenderChange;
-    this.onSaveNow = onSaveNow;
-    this.saveManager = saveManager;
+// 重力加速度（m/s^2）※ゲーム的に強め
+const GRAVITY = -18.0;
 
-    this.isOpen = false;
-    this.bindEvents();
-    this.subscribeSaveManager();
+// ジャンプ初速（m/s）
+const JUMP_VELOCITY = 7.5;
+
+// 地面判定の許容誤差（m）
+const GROUND_EPSILON = 0.1;
+
+// プレイヤーの体の高さ（m）
+const PLAYER_HEIGHT = 1.7;
+
+export class Physics {
+  constructor(viewer, player) {
+    this.viewer = viewer;
+    this.player = player;
+
+    // 垂直方向の速度（m/s）
+    this.verticalVelocity = 0;
+
+    // プレイヤーの体の高さ
+    this.playerEyeHeight = PLAYER_HEIGHT;
   }
 
-  bindEvents() {
-    if (this.openButton) {
-      this.openButton.addEventListener("click", () => this.toggle());
-    }
-    if (this.closeButton) {
-      this.closeButton.addEventListener("click", () => this.close());
-    }
-    if (this.genderMale) {
-      this.genderMale.addEventListener("click", () => {
-        this.setGender("male");
-      });
-    }
-    if (this.genderFemale) {
-      this.genderFemale.addEventListener("click", () => {
-        this.setGender("female");
-      });
-    }
-    if (this.saveNowButton) {
-      this.saveNowButton.addEventListener("click", () => {
-        if (this.onSaveNow) this.onSaveNow();
-      });
+  /**
+   * 初期位置を地面にスナップする
+   * Game の初期化時に1回だけ呼ぶ
+   */
+  snapToGround() {
+    const player = this.player;
+    const groundHeight = this.getGroundHeight(
+      player.longitude,
+      player.latitude
+    );
+
+    player.height = groundHeight;
+    this.verticalVelocity = 0;
+    player.isGrounded = true;
+
+    if (player.entity) {
+      player.entity.position = player.getPosition();
     }
 
-    // パネル外クリックで閉じる
-    document.addEventListener("click", (e) => {
-      if (!this.isOpen) return;
-      if (this.panel.contains(e.target)) return;
-      if (this.openButton.contains(e.target)) return;
-      this.close();
-    });
+    return groundHeight;
   }
 
-  subscribeSaveManager() {
-    if (!this.saveManager) return;
-    this.saveManager.onSaved((savedAt) => {
-      this.updateLastSaved(savedAt);
-    });
-  }
+  /**
+   * 1フレーム分の物理更新
+   * @param {number} dt 経過秒
+   * @param {boolean} jumpRequested ジャンプ要求
+   */
+  update(dt, jumpRequested) {
+    const player = this.player;
 
-  setGender(gender) {
-    if (this.genderMale) {
-      this.genderMale.classList.toggle("active", gender === "male");
+    // ---- ジャンプ ----
+    if (jumpRequested && player.isGrounded) {
+      this.verticalVelocity = JUMP_VELOCITY;
+      player.isGrounded = false;
     }
-    if (this.genderFemale) {
-      this.genderFemale.classList.toggle("active", gender === "female");
-    }
-    if (this.onGenderChange) this.onGenderChange(gender);
-  }
 
-  syncGender(gender) {
-    this.setGender(gender);
-  }
+    // ---- 重力 ----
+    this.verticalVelocity += GRAVITY * dt;
 
-  updateLastSaved(savedAt) {
-    if (!this.lastSaved) return;
-    if (!savedAt) {
-      this.lastSaved.textContent = "最終保存: --:--";
-      return;
-    }
-    const d = new Date(savedAt);
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mm = String(d.getMinutes()).padStart(2, "0");
-    this.lastSaved.textContent = `最終保存: ${hh}:${mm}`;
-  }
+    // ---- 高さ更新 ----
+    player.height += this.verticalVelocity * dt;
 
-  toggle() {
-    if (this.isOpen) {
-      this.close();
+    // ---- 地面判定 ----
+    const groundHeight = this.getGroundHeight(
+      player.longitude,
+      player.latitude
+    );
+
+    if (player.height <= groundHeight + GROUND_EPSILON) {
+      player.height = groundHeight;
+      this.verticalVelocity = 0;
+      player.isGrounded = true;
     } else {
-      this.open();
+      player.isGrounded = false;
     }
   }
 
-  open() {
-    this.isOpen = true;
-    this.panel.classList.remove("hidden");
+  /**
+   * 指定した緯度経度の地面高さを取得
+   * 地形が取得できない場合は 0 を返す
+   */
+  getGroundHeight(longitude, latitude) {
+    const carto = Cartographic.fromDegrees(longitude, latitude);
+    const height = this.viewer.scene.globe.getHeight(carto);
+    return typeof height === "number" && isFinite(height) ? height : 0;
   }
 
-  close() {
-    this.isOpen = false;
-    this.panel.classList.add("hidden");
+  /**
+   * 垂直速度をリセット
+   */
+  resetVerticalVelocity() {
+    this.verticalVelocity = 0;
   }
 }

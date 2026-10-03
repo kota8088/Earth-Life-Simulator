@@ -9,10 +9,10 @@ export const DEFAULT_SAVE = {
   gender: "male",
   longitude: 138.0,
   latitude: 35.0,
-  height: 0,
   viewMode: "first",
   heading: 0,
   pitch: -0.2,
+  fov: 60,
   stamina: 100,
   savedAt: 0,
 };
@@ -22,9 +22,6 @@ export class SaveManager {
     this.listeners = new Set();
   }
 
-  /**
-   * セーブデータを読み込む（なければデフォルトを返す）
-   */
   load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -32,7 +29,6 @@ export class SaveManager {
         return { ...DEFAULT_SAVE };
       }
       const parsed = JSON.parse(raw);
-      // 未知のキーは無視、欠けているキーはデフォルトで補完
       return { ...DEFAULT_SAVE, ...parsed };
     } catch (err) {
       console.warn("[SaveManager] セーブデータの読み込みに失敗しました。", err);
@@ -40,19 +36,16 @@ export class SaveManager {
     }
   }
 
-  /**
-   * セーブデータを保存する
-   */
   save(data) {
     try {
       const toSave = {
         gender: data.gender,
         longitude: data.longitude,
         latitude: data.latitude,
-        height: data.height,
         viewMode: data.viewMode,
         heading: data.heading,
         pitch: data.pitch,
+        fov: data.fov,
         stamina: data.stamina,
         savedAt: Date.now(),
       };
@@ -65,9 +58,6 @@ export class SaveManager {
     }
   }
 
-  /**
-   * 保存時刻の変化を購読する
-   */
   onSaved(callback) {
     this.listeners.add(callback);
     return () => this.listeners.delete(callback);

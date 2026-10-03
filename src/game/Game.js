@@ -12,22 +12,17 @@ import { HUD } from "./HUD.js";
 import { SettingsPanel } from "./SettingsPanel.js";
 import { SaveManager } from "./SaveManager.js";
 
-// ---- 移動速度（m/s）----
 const WALK_SPEED = 3.0;
 const DASH_SPEED = 9.0;
-
-// ---- 自動保存間隔（ms）----
-const AUTO_SAVE_INTERVAL = 10000;
+const AUTO_SAVE_INTERVAL = 5000; // 5秒ごと
 
 export class Game {
   constructor(viewer) {
     this.viewer = viewer;
 
-    // ---- セーブデータ読み込み ----
     this.saveManager = new SaveManager();
     const saveData = this.saveManager.load();
 
-    // ---- 各モジュール初期化 ----
     this.player = new Player(viewer, saveData);
     this.controls = new Controls(viewer.canvas);
     this.physics = new Physics(viewer, this.player);
@@ -35,30 +30,35 @@ export class Game {
     this.cameraController = new CameraController(viewer, this.player);
     this.hud = new HUD();
 
+    this.paused = false;
+
     this.settingsPanel = new SettingsPanel({
       onGenderChange: (gender) => this.handleGenderChange(gender),
-      onSaveNow: () => this.save(),
+      onFovChange: (value) => this.handleFovChange(value),
+      onSaveNow: () => this.save(true),
       saveManager: this.saveManager,
+      onOpenChange: (isOpen) => this.handleSettingsOpenChange(isOpen),
     });
 
-    // ---- 初期UI同期 ----
+    this.physics.snapToGround();
+
     this.settingsPanel.syncGender(this.player.gender);
+    this.settingsPanel.syncFov(this.player.fov);
     this.settingsPanel.updateLastSaved(saveData.savedAt);
     this.hud.updateStamina(this.player.stamina, this.player.maxStamina);
     this.hud.updateViewMode(this.player.viewMode);
 
-    // ---- イベント購読 ----
     this.bindEvents();
 
-    // ---- ループ管理 ----
     this.lastTime = performance.now();
     this.autoSaveTimer = 0;
     this.running = false;
+    this.requestJump = false;
 
-    // ---- Pointer Lock 案内 ----
     this.clickToPlay = document.getElementById("click-to-play");
     if (this.clickToPlay) {
       this.clickToPlay.addEventListener("click", () => {
+        if (this.paused) return;
         this.controls.requestLock();
       });
     }
@@ -66,31 +66,54 @@ export class Game {
   }
 
   bindEvents() {
-    // ---- V キーで視点切替 ----
     this.controls.on("toggleView", () => {
+      if (this.paused) return;
       const mode = this.player.toggleViewMode();
       this.hud.updateViewMode(mode);
       this.save();
     });
 
-    // ---- ジャンプ ----
+    this.controls.on("toggleSettings", () => {
+      this.settingsPanel.toggle();
+    });
+
     this.controls.on("jump", () => {
+      if (this.paused) return;
       this.requestJump = true;
     });
 
-    // ---- Pointer Lock 状態変化 ----
-    this.controls.on("lockChange", (locked) => {
+    this.controls.on("lockChange", () => {
       this.updateClickToPlayVisibility();
     });
 
-    // ---- 離脱時に保存 ----
     window.addEventListener("beforeunload", () => {
       this.save();
     });
   }
 
+  handleSettingsOpenChange(isOpen) {
+    this.paused = isOpen;
+
+    if (isOpen) {
+      this.controls.resetKeys();
+      this.controls.releaseLock();
+    } else {
+      this.controls.resetKeys();
+      this.requestJump = false;
+      this.lastTime = performance.now();
+    }
+
+    this.updateClickToPlayVisibility();
+  }
+
   updateClickToPlayVisibility() {
     if (!this.clickToPlay) return;
+
+    if (this.paused) {
+      this.clickToPlay.classList.add("hidden");
+      return;
+    }
+
     if (this.controls.isLocked) {
       this.clickToPlay.classList.add("hidden");
     } else {
@@ -103,9 +126,11 @@ export class Game {
     this.save();
   }
 
-  /**
-   * ゲーム開始
-   */
+  handleFovChange(value) {
+    this.player.setFov(value);
+    this.save();
+  }
+
   start() {
     if (this.running) return;
     this.running = true;
@@ -113,9 +138,6 @@ export class Game {
     this.loop();
   }
 
-  /**
-   * メインループ
-   */
   loop = () => {
     if (!this.running) return;
 
@@ -123,7 +145,6 @@ export class Game {
     let dt = (now - this.lastTime) / 1000;
     this.lastTime = now;
 
-    // タブ非アクティブ時の巨大な dt を防ぐ
     if (dt > 0.1) dt = 0.1;
 
     this.update(dt);
@@ -132,19 +153,24 @@ export class Game {
   };
 
   update(dt) {
-    // ---- マウス視点 ----
+    if (this.paused) {
+      this.controls.consumeMouseDelta();
+      return;
+    }
+
     const { dx, dy } = this.controls.consumeMouseDelta();
     if (dx !== 0 || dy !== 0) {
       this.cameraController.applyMouseDelta(dx, dy);
     }
 
-    // ---- 移動入力 ----
     const input = this.controls.keys;
-    const isDashing = input.dash && !this.player.isExhausted && (input.forward || input.backward || input.left || input.right);
+    const isMoving =
+      input.forward || input.backward || input.left || input.right;
+    const isDashing =
+      input.dash && !this.player.isExhausted && isMoving;
 
     const speed = isDashing ? DASH_SPEED : WALK_SPEED;
 
-    // ---- カメラ基準の移動方向 ----
     let moveNorth = 0;
     let moveEast = 0;
 
@@ -153,13 +179,11 @@ export class Game {
     if (input.right) moveEast += 1;
     if (input.left) moveEast -= 1;
 
-    // 正規化
     const len = Math.sqrt(moveNorth * moveNorth + moveEast * moveEast);
     if (len > 0) {
       moveNorth /= len;
       moveEast /= len;
 
-      // カメラの heading を基準に回転
       const heading = this.player.heading;
       const cos = Math.cos(heading);
       const sin = Math.sin(heading);
@@ -167,7 +191,6 @@ export class Game {
       const forwardN = moveNorth * cos - moveEast * sin;
       const forwardE = moveNorth * sin + moveEast * cos;
 
-      // メートル → 緯度経度
       const metersPerDegLat = 111320;
       const metersPerDegLon =
         111320 * Math.cos((this.player.latitude * Math.PI) / 180);
@@ -175,11 +198,9 @@ export class Game {
       const dLat = (forwardN * speed * dt) / metersPerDegLat;
       const dLon = (forwardE * speed * dt) / metersPerDegLon;
 
-      // 位置更新
       let newLon = this.player.longitude + dLon;
       let newLat = this.player.latitude + dLat;
 
-      // ---- 障害物との衝突判定 ----
       const collision = this.obstacles.resolveCollision(
         newLon,
         newLat,
@@ -191,32 +212,26 @@ export class Game {
         newLat += collision.pushLat;
       }
 
-      this.player.setPosition(
-        newLon,
-        newLat,
-        this.player.height
-      );
+      this.player.setPosition(newLon, newLat, this.player.height);
     }
 
-    // ---- スタミナ ----
     this.updateStamina(dt, isDashing);
 
-    // ---- 物理 ----
     const jump = this.requestJump === true;
     this.requestJump = false;
     this.physics.update(dt, jump);
 
-    // ---- 位置を Entity に反映 ----
-    this.player.entity.position = this.player.getPosition();
+    if (this.player.entity) {
+      this.player.entity.position = this.player.getPosition();
+    }
 
-    // ---- カメラ更新 ----
     this.cameraController.update();
 
-    // ---- 自動保存 ----
+    // ---- オートセーブ ----
     this.autoSaveTimer += dt * 1000;
     if (this.autoSaveTimer >= AUTO_SAVE_INTERVAL) {
       this.autoSaveTimer = 0;
-      this.save();
+      this.save(true);
     }
   }
 
@@ -230,15 +245,16 @@ export class Game {
         player.isExhausted = true;
       }
     } else {
-      // 回復
       if (player.stamina < player.maxStamina) {
         player.stamina += player.staminaRecoverRate * dt;
         if (player.stamina > player.maxStamina) {
           player.stamina = player.maxStamina;
         }
       }
-      // 一定量回復したら再ダッシュ可
-      if (player.isExhausted && player.stamina >= player.staminaRecoverThreshold) {
+      if (
+        player.isExhausted &&
+        player.stamina >= player.staminaRecoverThreshold
+      ) {
         player.isExhausted = false;
       }
     }
@@ -246,9 +262,16 @@ export class Game {
     this.hud.updateStamina(player.stamina, player.maxStamina);
   }
 
-  save() {
+  /**
+   * セーブ
+   * @param {boolean} isAuto オートセーブなら HUD 通知を出す
+   */
+  save(isAuto = false) {
     const data = this.player.toSaveData();
-    this.saveManager.save(data);
+    const ok = this.saveManager.save(data);
+    if (ok && isAuto) {
+      this.hud.showAutosave();
+    }
   }
 
   destroy() {

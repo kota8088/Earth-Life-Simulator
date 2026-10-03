@@ -197,7 +197,7 @@ body {
 }
 
 /* =========================================================
-   Phase 2: 操作説明（左下）
+   操作説明（左下）
    ========================================================= */
 #controls-help {
   position: absolute;
@@ -244,7 +244,7 @@ body {
 }
 
 /* =========================================================
-   Phase 2: スタミナゲージ（下部中央）
+   スタミナゲージ（下部中央）
    ========================================================= */
 #stamina-container {
   position: absolute;
@@ -301,7 +301,7 @@ body {
 }
 
 /* =========================================================
-   Phase 2: 視点モード表示（下部右）
+   視点モード表示（下部右）
    ========================================================= */
 #view-mode-indicator {
   position: absolute;
@@ -322,14 +322,45 @@ body {
 }
 
 /* =========================================================
-   Phase 2: 設定パネル
+   オートセーブ通知（右上）
+   ========================================================= */
+#autosave-indicator {
+  position: absolute;
+  top: 68px;
+  right: 20px;
+  z-index: 10;
+  padding: 6px 14px;
+  background: rgba(100, 180, 255, 0.2);
+  border: 1px solid rgba(100, 180, 255, 0.5);
+  border-radius: 20px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 0.75rem;
+  color: #cfe4ff;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+#autosave-indicator.show {
+  opacity: 1;
+}
+
+#autosave-indicator.hidden {
+  display: none;
+}
+
+/* =========================================================
+   設定パネル
    ========================================================= */
 #settings-panel {
   position: absolute;
   top: 68px;
   right: 16px;
   z-index: 20;
-  width: 280px;
+  width: 300px;
   background: rgba(0, 0, 16, 0.85);
   border: 1px solid rgba(100, 180, 255, 0.35);
   border-radius: 12px;
@@ -415,6 +446,64 @@ body {
   color: #ffffff;
 }
 
+/* FOV スライダー */
+.fov-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#fov-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(100, 180, 255, 0.25);
+  outline: none;
+  cursor: pointer;
+}
+
+#fov-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #64b4ff;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+#fov-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+#fov-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #64b4ff;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+}
+
+.fov-value {
+  min-width: 44px;
+  text-align: right;
+  font-size: 0.85rem;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+
+.fov-hint {
+  margin-top: 8px;
+  font-size: 0.7rem;
+  color: #7fa8d8;
+}
+
+/* セーブボタン */
 .save-button {
   width: 100%;
   padding: 10px;
@@ -442,8 +531,16 @@ body {
   text-align: right;
 }
 
+.autosave-hint {
+  margin-top: 4px;
+  font-size: 0.68rem;
+  color: #7fa8d8;
+  text-align: right;
+  letter-spacing: 0.05em;
+}
+
 /* =========================================================
-   Phase 2: Pointer Lock 案内
+   Pointer Lock 案内
    ========================================================= */
 #click-to-play {
   position: absolute;
@@ -523,7 +620,6 @@ body {
     font-size: 0.9rem;
   }
 
-  /* Phase 2 レスポンシブ */
   #controls-help {
     left: 8px;
     bottom: 8px;
@@ -547,6 +643,13 @@ body {
     bottom: 8px;
     padding: 5px 10px;
     font-size: 0.68rem;
+  }
+
+  #autosave-indicator {
+    top: 60px;
+    right: 14px;
+    font-size: 0.68rem;
+    padding: 5px 10px;
   }
 
   #settings-panel {
