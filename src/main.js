@@ -81,14 +81,20 @@ if (settingsButton) {
 
 function init() {
   try {
+    // ========================================
     // トークン確認
+    // ========================================
+
     if (!ionToken) {
       throw new Error(
         "Cesium ion トークンが設定されていません。.env.local の VITE_CESIUM_ION_TOKEN を確認してください。"
       );
     }
 
+    // ========================================
     // Cesium ionへトークンを設定
+    // ========================================
+
     Ion.defaultAccessToken = ionToken;
 
     // ========================================
@@ -96,8 +102,7 @@ function init() {
     // ========================================
 
     const viewer = new Viewer("cesiumContainer", {
-      // デフォルトの画像レイヤーを無効化
-      baseLayer: false,
+      // 地球の標準レイヤーを使用
       baseLayerPicker: false,
 
       // 不要なUIを無効化
