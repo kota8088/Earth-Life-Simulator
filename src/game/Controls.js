@@ -8,7 +8,6 @@ export class Controls {
   constructor(domElement) {
     this.dom = domElement;
 
-    // ---- キー状態 ----
     this.keys = {
       forward: false,
       backward: false,
@@ -18,17 +17,15 @@ export class Controls {
       dash: false,
     };
 
-    // ---- マウス移動量（毎フレームで消費）----
     this.mouseDelta = { x: 0, y: 0 };
 
-    // ---- Pointer Lock 状態 ----
     this.isLocked = false;
     this.lastUnlockTime = 0;
 
-    // ---- イベント購読者 ----
     this.listeners = {
       toggleView: new Set(),
       toggleSettings: new Set(),
+      toggleMap: new Set(),
       jump: new Set(),
       lockChange: new Set(),
     };
@@ -36,9 +33,6 @@ export class Controls {
     this.bindEvents();
   }
 
-  /**
-   * 入力欄（input / textarea / contenteditable）にフォーカスがあるか
-   */
   isTextInputFocused() {
     const el = document.activeElement;
     if (!el) return false;
@@ -51,7 +45,6 @@ export class Controls {
   }
 
   bindEvents() {
-    // ---- キーボード ----
     this.onKeyDown = (e) => {
       const inTextInput = this.isTextInputFocused();
 
@@ -92,6 +85,12 @@ export class Controls {
             this.emit("toggleSettings");
           }
           break;
+        case "KeyQ":
+          if (inTextInput) return;
+          if (!e.repeat) {
+            this.emit("toggleMap");
+          }
+          break;
       }
     };
 
@@ -127,7 +126,6 @@ export class Controls {
     window.addEventListener("keyup", this.onKeyUp);
     window.addEventListener("blur", this.onBlur);
 
-    // ---- マウス移動 ----
     this.onMouseMove = (e) => {
       if (!this.isLocked) return;
       this.mouseDelta.x += e.movementX || 0;
@@ -136,7 +134,6 @@ export class Controls {
 
     document.addEventListener("mousemove", this.onMouseMove);
 
-    // ---- Pointer Lock 状態変化 ----
     this.onLockChange = () => {
       const wasLocked = this.isLocked;
       this.isLocked = document.pointerLockElement === this.dom;
@@ -151,15 +148,11 @@ export class Controls {
     document.addEventListener("pointerlockchange", this.onLockChange);
   }
 
-  /**
-   * Pointer Lock を要求する
-   * 解除直後（1秒以内）はセキュリティ制約で取得できないため、その場合はスキップ
-   */
   requestLock() {
     const now = performance.now();
     if (this.lastUnlockTime && now - this.lastUnlockTime < 1000) {
       console.warn(
-        "[Controls] Pointer Lock は解除直後は取得できません。少し待ってください。"
+        "[Controls] Pointer Lock は解除直後は取得できません。"
       );
       return;
     }
@@ -167,7 +160,6 @@ export class Controls {
     if (this.dom.requestPointerLock) {
       try {
         const result = this.dom.requestPointerLock();
-        // 新しいブラウザは Promise を返す
         if (result && typeof result.catch === "function") {
           result.catch((err) => {
             console.warn("[Controls] Pointer Lock 失敗:", err.message);
@@ -179,18 +171,12 @@ export class Controls {
     }
   }
 
-  /**
-   * Pointer Lock を解除する
-   */
   releaseLock() {
     if (document.pointerLockElement) {
       document.exitPointerLock();
     }
   }
 
-  /**
-   * マウス移動量を取得してリセット
-   */
   consumeMouseDelta() {
     const dx = this.mouseDelta.x;
     const dy = this.mouseDelta.y;
@@ -199,9 +185,6 @@ export class Controls {
     return { dx, dy };
   }
 
-  /**
-   * キー状態をすべてリセット
-   */
   resetKeys() {
     this.keys.forward = false;
     this.keys.backward = false;

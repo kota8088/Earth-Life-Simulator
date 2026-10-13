@@ -6,8 +6,10 @@
     <meta name="description" content="Earth Life Simulator - 3D地球シミュレーター" />
     <title>Earth Life Simulator</title>
   </head>
-  <body>
-    <!-- ローディング画面 -->
+  <body class="none-mode">
+    <!-- =========================================================
+         ローディング画面
+         ========================================================= -->
     <div id="loading-screen" class="overlay">
       <div class="loading-content">
         <div class="spinner"></div>
@@ -15,7 +17,9 @@
       </div>
     </div>
 
-    <!-- エラー画面 -->
+    <!-- =========================================================
+         エラー画面
+         ========================================================= -->
     <div id="error-screen" class="overlay hidden">
       <div class="error-content">
         <h2>読み込みエラー</h2>
@@ -24,28 +28,62 @@
       </div>
     </div>
 
-    <!-- Cesiumコンテナ -->
+    <!-- =========================================================
+         Cesium コンテナ
+         ========================================================= -->
     <div id="cesiumContainer"></div>
 
-    <!-- ヘッダー -->
+    <!-- =========================================================
+         ヘッダー
+         ========================================================= -->
     <header id="app-header">
       <h1 id="app-title">Earth Life Simulator</h1>
       <button id="settings-button" type="button" aria-label="設定">⚙️</button>
     </header>
 
-    <!-- 操作説明（左下） -->
+    <!-- =========================================================
+         操作説明（左下）
+         ========================================================= -->
     <div id="controls-help">
       <div class="help-title">操作方法</div>
       <div class="help-row"><span class="key">W A S D</span> 移動</div>
       <div class="help-row"><span class="key">Shift</span> ダッシュ</div>
       <div class="help-row"><span class="key">Space</span> ジャンプ</div>
       <div class="help-row"><span class="key">V</span> 視点切替</div>
+      <div class="help-row"><span class="key">Q</span> マップ</div>
       <div class="help-row"><span class="key">M</span> 設定</div>
-      <div class="help-row"><span class="key">Click</span> マウス固定</div>
-      <div class="help-row"><span class="key">ESC</span> マウス解放</div>
     </div>
 
-    <!-- スタミナゲージ（下部中央） -->
+    <!-- =========================================================
+         コンパス（上部中央）
+         ========================================================= -->
+    <div id="compass">
+      <div id="compass-needle"></div>
+      <div id="compass-label">N</div>
+    </div>
+
+    <!-- =========================================================
+         座標表示（上部左）
+         ========================================================= -->
+    <div id="coordinates">
+      <span id="coord-lat">--.----</span>,
+      <span id="coord-lon">---.----</span>
+    </div>
+
+    <!-- =========================================================
+         ミニマップ（右上）
+         ========================================================= -->
+    <div id="minimap-container">
+      <div id="minimap-viewer"></div>
+      <div id="minimap-overlay">
+        <div id="minimap-player-pin">📍</div>
+      </div>
+      <div id="minimap-label">MINIMAP</div>
+    </div>
+
+    <!-- =========================================================
+         スタミナゲージ（下部中央）
+         ========================================================= -->
     <div id="stamina-container">
       <div class="stamina-label">STAMINA</div>
       <div class="stamina-bar">
@@ -54,13 +92,37 @@
       <div id="stamina-value" class="stamina-value">100</div>
     </div>
 
-    <!-- 視点モード表示（下部右） -->
+    <!-- =========================================================
+         視点モード表示（下部右）
+         ========================================================= -->
     <div id="view-mode-indicator">1st Person</div>
 
-    <!-- オートセーブ通知（右上、ヘッダーの下） -->
-    <div id="autosave-indicator" class="hidden">💾 自動保存</div>
+    <!-- =========================================================
+         オートセーブ通知
+         ========================================================= -->
+    <div id="autosave-indicator" class="hidden">💾 オートセーブ中…</div>
 
-    <!-- 設定パネル -->
+    <!-- =========================================================
+         クロスヘア
+         ========================================================= -->
+    <div id="crosshair">
+      <div class="crosshair-line crosshair-top"></div>
+      <div class="crosshair-line crosshair-bottom"></div>
+      <div class="crosshair-line crosshair-left"></div>
+      <div class="crosshair-line crosshair-right"></div>
+      <div class="crosshair-dot"></div>
+    </div>
+
+    <!-- =========================================================
+         ESC解除時の案内
+         ========================================================= -->
+    <div id="esc-released-overlay">
+      <div class="esc-message">クリックして再開</div>
+    </div>
+
+    <!-- =========================================================
+         設定パネル
+         ========================================================= -->
     <div id="settings-panel" class="hidden">
       <div class="settings-header">
         <span>設定</span>
@@ -78,26 +140,95 @@
         <div class="settings-section">
           <div class="settings-section-title">視野角（FOV）</div>
           <div class="fov-row">
-            <input id="fov-slider" type="range" min="30" max="110" step="1" value="60" />
+            <input id="fov-slider" type="range" min="30" max="110" step="10" value="60" />
             <span id="fov-value" class="fov-value">60°</span>
           </div>
-          <div class="fov-hint">一人称・三人称の両方に適用されます</div>
+          <div class="fov-hint">30〜110（10刻み）</div>
+          <button id="fov-reset" type="button" class="reset-button">リセット（60°）</button>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">クロスヘア</div>
+          <label class="toggle-row">
+            <input id="crosshair-toggle" type="checkbox" checked />
+            <span>表示する</span>
+          </label>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">音量</div>
+          <div class="volume-row">
+            <label>BGM</label>
+            <input id="volume-bgm" type="range" min="0" max="100" step="1" value="30" />
+            <span id="volume-bgm-value">30</span>
+          </div>
+          <div class="volume-row">
+            <label>効果音</label>
+            <input id="volume-se" type="range" min="0" max="100" step="1" value="70" />
+            <span id="volume-se-value">70</span>
+          </div>
+          <div class="volume-row">
+            <label>環境音</label>
+            <input id="volume-ambient" type="range" min="0" max="100" step="1" value="50" />
+            <span id="volume-ambient-value">50</span>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">グラフィック</div>
+          <div class="graphics-buttons">
+            <button id="graphics-low" type="button" class="graphics-button">低</button>
+            <button id="graphics-medium" type="button" class="graphics-button active">中</button>
+            <button id="graphics-high" type="button" class="graphics-button">高</button>
+          </div>
         </div>
 
         <div class="settings-section">
           <div class="settings-section-title">セーブデータ</div>
           <button id="save-now" type="button" class="save-button">今すぐ保存</button>
-          <div id="last-saved" class="last-saved">最終保存: --:--</div>
-          <div class="autosave-hint">オートセーブ: 5秒ごと</div>
+          <div id="last-saved" class="last-saved">最終保存: --:--:--</div>
+          <div class="autosave-hint">オートセーブ: 30秒ごと</div>
         </div>
       </div>
     </div>
 
-    <!-- Pointer Lock 案内 -->
-    <div id="click-to-play">
-      <div class="click-to-play-inner">
-        <div class="click-icon">🖱️</div>
-        <div class="click-text">クリックしてプレイ開始</div>
+    <!-- =========================================================
+         全画面マップ（Qキー）
+         ========================================================= -->
+    <div id="map-view" class="hidden">
+      <div id="map-viewer"></div>
+      <div id="map-header">
+        <span>WORLD MAP</span>
+        <button id="map-close" type="button" aria-label="閉じる">✕</button>
+      </div>
+      <div id="map-info">Q キーで閉じる ・ ドラッグで回転 ・ ホイールでズーム</div>
+    </div>
+
+    <!-- =========================================================
+         スタート画面
+         ========================================================= -->
+    <div id="start-screen">
+      <div class="start-bg-stars"></div>
+      <div class="start-bg-glow"></div>
+
+      <div class="start-content">
+        <div class="start-logo">🌍</div>
+        <h1 class="start-title">Earth Life Simulator</h1>
+        <p class="start-subtitle">地球で始まる、あなたの生活。</p>
+
+        <div class="start-buttons">
+          <button id="start-button" type="button" class="start-button">
+            <span class="start-button-glow"></span>
+            <span class="start-button-text">START</span>
+          </button>
+          <button id="start-settings-button" type="button" class="start-settings-button">
+            ⚙️ 設定
+          </button>
+        </div>
+
+        <div class="start-footer">
+          <span id="start-version">v0.3.0</span>
+        </div>
       </div>
     </div>
 

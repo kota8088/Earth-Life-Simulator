@@ -1,6 +1,6 @@
 /* =========================================================
    Game
-   Phase 2 のメインループ
+   Phase 3 のメインループ
    ========================================================= */
 
 import { Player } from "./Player.js";
@@ -11,10 +11,12 @@ import { CameraController } from "./CameraController.js";
 import { HUD } from "./HUD.js";
 import { SettingsPanel } from "./SettingsPanel.js";
 import { SaveManager } from "./SaveManager.js";
+import { UIManager } from "./UIManager.js";
+import { Minimap } from "./Minimap.js";
 
 const WALK_SPEED = 3.0;
 const DASH_SPEED = 9.0;
-const AUTO_SAVE_INTERVAL = 5000; // 5秒ごと
+const AUTO_SAVE_INTERVAL = 5000;
 
 export class Game {
   constructor(viewer) {
@@ -30,6 +32,8 @@ export class Game {
     this.cameraController = new CameraController(viewer, this.player);
     this.hud = new HUD();
 
+    this.uiManager = new UIManager(this.controls, viewer.canvas);
+
     this.paused = false;
 
     this.settingsPanel = new SettingsPanel({
@@ -41,6 +45,9 @@ export class Game {
     });
 
     this.physics.snapToGround();
+
+    // ---- ミニマップ ----
+    this.minimap = new Minimap(this.player);
 
     this.settingsPanel.syncGender(this.player.gender);
     this.settingsPanel.syncFov(this.player.fov);
@@ -55,14 +62,7 @@ export class Game {
     this.running = false;
     this.requestJump = false;
 
-    this.clickToPlay = document.getElementById("click-to-play");
-    if (this.clickToPlay) {
-      this.clickToPlay.addEventListener("click", () => {
-        if (this.paused) return;
-        this.controls.requestLock();
-      });
-    }
-    this.updateClickToPlayVisibility();
+    this.uiManager.enterNoneMode();
   }
 
   bindEvents() {
@@ -77,13 +77,13 @@ export class Game {
       this.settingsPanel.toggle();
     });
 
+    this.controls.on("toggleMap", () => {
+      console.info("[Game] Qキー: マップは第2弾で実装");
+    });
+
     this.controls.on("jump", () => {
       if (this.paused) return;
       this.requestJump = true;
-    });
-
-    this.controls.on("lockChange", () => {
-      this.updateClickToPlayVisibility();
     });
 
     window.addEventListener("beforeunload", () => {
@@ -91,33 +91,26 @@ export class Game {
     });
   }
 
+  enterGameMode() {
+    this.uiManager.enterGameMode();
+  }
+
+  openSettingsFromStartScreen() {
+    this.uiManager.enterUIMode();
+    this.settingsPanel.open();
+  }
+
   handleSettingsOpenChange(isOpen) {
     this.paused = isOpen;
 
     if (isOpen) {
+      this.uiManager.enterUIMode();
       this.controls.resetKeys();
-      this.controls.releaseLock();
     } else {
+      this.uiManager.exitUIMode();
       this.controls.resetKeys();
       this.requestJump = false;
       this.lastTime = performance.now();
-    }
-
-    this.updateClickToPlayVisibility();
-  }
-
-  updateClickToPlayVisibility() {
-    if (!this.clickToPlay) return;
-
-    if (this.paused) {
-      this.clickToPlay.classList.add("hidden");
-      return;
-    }
-
-    if (this.controls.isLocked) {
-      this.clickToPlay.classList.add("hidden");
-    } else {
-      this.clickToPlay.classList.remove("hidden");
     }
   }
 
@@ -135,6 +128,7 @@ export class Game {
     if (this.running) return;
     this.running = true;
     this.lastTime = performance.now();
+    this.save();
     this.loop();
   }
 
@@ -153,7 +147,7 @@ export class Game {
   };
 
   update(dt) {
-    if (this.paused) {
+    if (this.paused || !this.uiManager.isGameMode()) {
       this.controls.consumeMouseDelta();
       return;
     }
@@ -227,7 +221,11 @@ export class Game {
 
     this.cameraController.update();
 
-    // ---- オートセーブ ----
+    // ---- ミニマップ更新 ----
+    if (this.minimap) {
+      this.minimap.update();
+    }
+
     this.autoSaveTimer += dt * 1000;
     if (this.autoSaveTimer >= AUTO_SAVE_INTERVAL) {
       this.autoSaveTimer = 0;
@@ -262,10 +260,6 @@ export class Game {
     this.hud.updateStamina(player.stamina, player.maxStamina);
   }
 
-  /**
-   * セーブ
-   * @param {boolean} isAuto オートセーブなら HUD 通知を出す
-   */
   save(isAuto = false) {
     const data = this.player.toSaveData();
     const ok = this.saveManager.save(data);
@@ -277,6 +271,8 @@ export class Game {
   destroy() {
     this.running = false;
     this.controls.destroy();
+    this.uiManager.destroy();
+    if (this.minimap) this.minimap.destroy();
     this.player.destroy();
   }
 }

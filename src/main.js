@@ -10,6 +10,7 @@ import {
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
 import { Game } from "./game/Game.js";
+import { StartScreen } from "./game/StartScreen.js";
 
 // ========================================
 // Cesium のアセットパス
@@ -155,17 +156,38 @@ function init() {
 
     // ========================================
     // Phase 2: ゲーム初期化
+    // ※ ここではまだ start() しない
     // ========================================
 
     const game = new Game(viewer);
-    game.start();
     window.__game = game;
+
+    // ========================================
+    // Phase 3: スタート画面
+    // ========================================
+
+    const startScreen = new StartScreen({
+      onStart: () => {
+        // STARTボタンが押された
+        game.start();
+        game.enterGameMode();
+      },
+      onOpenSettings: () => {
+        // スタート画面から設定を開く
+        game.openSettingsFromStartScreen();
+      },
+    });
+
+    window.__startScreen = startScreen;
 
     // ========================================
     // ローディング終了
     // ========================================
 
     hideLoading();
+
+    // スタート画面を表示
+    startScreen.show();
 
   } catch (error) {
     const message =
